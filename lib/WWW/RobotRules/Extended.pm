@@ -4,6 +4,7 @@ use URI;
 
 # The following methods must be provided by the subclass.
 sub agent;
+sub is_me;
 sub visit;
 sub no_visits;
 sub last_visits;
@@ -27,11 +28,11 @@ or wildcards "*" into rules
 
 =head1 VERSION
 
-Version 0.01
+Version 0.02
 
 =cut
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 
 =head1 SYNOPSIS
@@ -39,10 +40,10 @@ our $VERSION = '0.01';
 Quick summary of what the module does.
 
 
-use WWW::RobotRules::Extended;
- my $rules = WWW::RobotRules::Extended->new('MOMspider/1.0');
-
+ use WWW::RobotRules::Extended;
  use LWP::Simple qw(get);
+ 
+ my $rules = WWW::RobotRules::Extended->new('MOMspider/1.0');
 
  {
    my $url = "http://some.place/robots.txt";
@@ -88,10 +89,8 @@ A list of functions that can be exported.  You can delete this section
 if you don't export anything, such as for a purely object-oriented module.
 
 =head2 new
-
 This is the constructor for WWW::RobotRules::Extended objects.  The first
 argument given to new() is the name of the robot.
-
 =cut
 
 sub new {
@@ -111,7 +110,7 @@ sub new {
 The parse() method takes as arguments the URL that was used to
 retrieve the F</robots.txt> file, and the contents of the file.
 
-$rules->allowed($uri)
+ $rules->allowed($uri)
 
 Returns TRUE if this robot is allowed to retrieve this URL.
 =cut
@@ -190,12 +189,14 @@ sub parse {
             $rule=~ s/\?/\\?/g;
             $rule=~ s/\./\\./g;
 
-	    if ($is_me) {
-		push(@me_alloweddisallowed, $verb." ".$rule);
-	    }
-	    elsif ($is_anon) {
-		push(@anon_alloweddisallowed, $verb." ".$rule);
-	    }
+	    if (length $allowdisallow) {
+	    	if ($is_me) {
+			push(@me_alloweddisallowed, $verb." ".$rule);
+	    	}
+	    	elsif ($is_anon) {
+			push(@anon_alloweddisallowed, $verb." ".$rule);
+	    	}
+            }
 	}
         elsif (/\S\s*:/) {
              # ignore
@@ -217,23 +218,11 @@ sub parse {
 
 =cut
 
-sub is_me {
-    my($self, $ua_line) = @_;
-    my $me = $self->agent;
-
-    # See whether my short-name is a substring of the
-    #  "User-Agent: ..." line that we were passed:
-
-    if(index(lc($me), lc($ua_line)) >= 0) {
-      return 1;
-    }
-    else {
-      return '';
-    }
-}
 
 =head2 allowed
+
 Returns TRUE if this robot is allowed to retrieve this URL.
+
 =cut
 
 sub allowed {
@@ -412,6 +401,21 @@ package WWW::RobotRules::Extended::InCore;
 use vars qw(@ISA);
 @ISA = qw(WWW::RobotRules::Extended);
 
+
+sub is_me {
+    my($self, $ua_line) = @_;
+    my $me = $self->agent;
+
+    # See whether my short-name is a substring of the
+    #  "User-Agent: ..." line that we were passed:
+
+    if(index(lc($me), lc($ua_line)) >= 0) {
+      return 1;
+    }
+    else {
+      return '';
+    }
+}
 
 
 sub agent {
